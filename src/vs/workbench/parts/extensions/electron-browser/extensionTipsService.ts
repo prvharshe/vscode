@@ -26,7 +26,7 @@ import { IExtensionsConfiguration, ConfigurationKey } from 'vs/workbench/parts/e
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IConfigurationEditingService, ConfigurationTarget } from 'vs/workbench/services/configuration/common/configurationEditing';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
-import * as fs from 'fs';
+import * as pfs from 'vs/base/node/pfs';
 import { distinct } from 'vs/base/common/arrays';
 
 interface IExtensionsContent {
@@ -323,7 +323,7 @@ export class ExtensionTipsService implements IExtensionTipsService {
 			return this._exeBasedRecommendations;
 		}
 
-		let envpaths = process.env.PATH.split(process.platform === 'win32' ? ';' : ':');
+		let envpaths: string[] = process.env.PATH.split(process.platform === 'win32' ? ';' : ':');
 		let foundExecutables: Set<string> = new Set<string>();
 
 		// Loop through recommended extensions
@@ -333,18 +333,15 @@ export class ExtensionTipsService implements IExtensionTipsService {
 			// Loop through executables that would result in recommending current extension
 			for (let i = 0; i < executables.length; i++) {
 				if (!foundExecutables.has(executables[i])) {
+					let fileName = process.platform === 'win32' ? executables[i] + '.exe' : executables[i];
 
 					// Loop through paths in PATH to find current executable
-					for (let pathEntry of envpaths) {
-						let fullPath = paths.join(pathEntry, executables[i]);
-						if (process.platform === 'win32') {
-							fullPath += '.exe';
-						}
-						if (fs.existsSync(fullPath)) {
+					let fileCheckPromises = envpaths.map(x => pfs.fileExists(paths.join(x, fileName)));
+					TPromise.join(fileCheckPromises).then(values => {
+						if (values.some(x => x)) {
 							foundExecutables.add(executables[i]);
-							break;
 						}
-					}
+					});
 				}
 				if (foundExecutables.has(executables[i])) {
 					this._exeBasedRecommendations.push(entry.key);
