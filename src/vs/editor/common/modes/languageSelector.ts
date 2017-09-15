@@ -7,11 +7,13 @@
 
 import URI from 'vs/base/common/uri';
 import { match as matchGlobPattern } from 'vs/base/common/glob'; // TODO@Alex
+import { isEqualOrParent } from 'vs/base/common/paths';
 
 export interface LanguageFilter {
 	language?: string;
 	scheme?: string;
 	pattern?: string;
+	folder?: { uri: URI, name: string, index: number }; // TODO@Ben wait for WorkspaceFolder type in main
 }
 
 export type LanguageSelector = string | LanguageFilter | (string | LanguageFilter)[];
@@ -50,9 +52,17 @@ export function score(selector: LanguageSelector, candidateUri: URI, candidateLa
 
 	} else if (selector) {
 		// filter -> select accordingly, use defaults for scheme
-		const { language, pattern, scheme } = selector;
+		const { language, pattern, scheme, folder } = selector;
 
 		let ret = 0;
+
+		if (folder) {
+			if (isEqualOrParent(candidateUri.fsPath, folder.uri.fsPath)) {
+				ret = 10;
+			} else {
+				return 0;
+			}
+		}
 
 		if (scheme) {
 			if (scheme === candidateUri.scheme) {

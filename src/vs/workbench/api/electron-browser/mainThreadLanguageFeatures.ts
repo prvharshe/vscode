@@ -21,6 +21,7 @@ import { LanguageConfiguration } from 'vs/editor/common/modes/languageConfigurat
 import { IHeapService } from './mainThreadHeapService';
 import { IModeService } from 'vs/editor/common/services/modeService';
 import { extHostNamedCustomer } from 'vs/workbench/api/electron-browser/extHostCustomers';
+import { LanguageFilter } from 'vs/editor/common/modes/languageSelector';
 
 @extHostNamedCustomer(MainContext.MainThreadLanguageFeatures)
 export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesShape {
@@ -57,7 +58,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- outline
 
-	$registerOutlineSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerOutlineSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.DocumentSymbolProviderRegistry.register(selector, <modes.DocumentSymbolProvider>{
 			provideDocumentSymbols: (model: IReadOnlyModel, token: CancellationToken): Thenable<modes.SymbolInformation[]> => {
 				return wireCancellationToken(token, this._proxy.$provideDocumentSymbols(handle, model.uri));
@@ -68,7 +69,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- code lens
 
-	$registerCodeLensSupport(handle: number, selector: vscode.DocumentSelector, eventHandle: number): TPromise<any> {
+	$registerCodeLensSupport(handle: number, selector: LanguageFilter, eventHandle: number): TPromise<any> {
 
 		const provider = <modes.CodeLensProvider>{
 			provideCodeLenses: (model: IReadOnlyModel, token: CancellationToken): modes.ICodeLensSymbol[] | Thenable<modes.ICodeLensSymbol[]> => {
@@ -99,7 +100,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- declaration
 
-	$registerDeclaractionSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerDeclaractionSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.DefinitionProviderRegistry.register(selector, <modes.DefinitionProvider>{
 			provideDefinition: (model, position, token): Thenable<modes.Definition> => {
 				return wireCancellationToken(token, this._proxy.$provideDefinition(handle, model.uri, position));
@@ -108,7 +109,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 		return undefined;
 	}
 
-	$registerImplementationSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerImplementationSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.ImplementationProviderRegistry.register(selector, <modes.ImplementationProvider>{
 			provideImplementation: (model, position, token): Thenable<modes.Definition> => {
 				return wireCancellationToken(token, this._proxy.$provideImplementation(handle, model.uri, position));
@@ -117,7 +118,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 		return undefined;
 	}
 
-	$registerTypeDefinitionSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerTypeDefinitionSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.TypeDefinitionProviderRegistry.register(selector, <modes.TypeDefinitionProvider>{
 			provideTypeDefinition: (model, position, token): Thenable<modes.Definition> => {
 				return wireCancellationToken(token, this._proxy.$provideTypeDefinition(handle, model.uri, position));
@@ -128,7 +129,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- extra info
 
-	$registerHoverProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerHoverProvider(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.HoverProviderRegistry.register(selector, <modes.HoverProvider>{
 			provideHover: (model: IReadOnlyModel, position: EditorPosition, token: CancellationToken): Thenable<modes.Hover> => {
 				return wireCancellationToken(token, this._proxy.$provideHover(handle, model.uri, position));
@@ -139,7 +140,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- occurrences
 
-	$registerDocumentHighlightProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerDocumentHighlightProvider(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.DocumentHighlightProviderRegistry.register(selector, <modes.DocumentHighlightProvider>{
 			provideDocumentHighlights: (model: IReadOnlyModel, position: EditorPosition, token: CancellationToken): Thenable<modes.DocumentHighlight[]> => {
 				return wireCancellationToken(token, this._proxy.$provideDocumentHighlights(handle, model.uri, position));
@@ -150,7 +151,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- references
 
-	$registerReferenceSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerReferenceSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.ReferenceProviderRegistry.register(selector, <modes.ReferenceProvider>{
 			provideReferences: (model: IReadOnlyModel, position: EditorPosition, context: modes.ReferenceContext, token: CancellationToken): Thenable<modes.Location[]> => {
 				return wireCancellationToken(token, this._proxy.$provideReferences(handle, model.uri, position, context));
@@ -161,7 +162,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- quick fix
 
-	$registerQuickFixSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerQuickFixSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.CodeActionProviderRegistry.register(selector, <modes.CodeActionProvider>{
 			provideCodeActions: (model: IReadOnlyModel, range: EditorRange, token: CancellationToken): Thenable<modes.Command[]> => {
 				return this._heapService.trackRecursive(wireCancellationToken(token, this._proxy.$provideCodeActions(handle, model.uri, range)));
@@ -172,7 +173,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- formatting
 
-	$registerDocumentFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerDocumentFormattingSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.DocumentFormattingEditProviderRegistry.register(selector, <modes.DocumentFormattingEditProvider>{
 			provideDocumentFormattingEdits: (model: IReadOnlyModel, options: modes.FormattingOptions, token: CancellationToken): Thenable<ISingleEditOperation[]> => {
 				return wireCancellationToken(token, this._proxy.$provideDocumentFormattingEdits(handle, model.uri, options));
@@ -181,7 +182,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 		return undefined;
 	}
 
-	$registerRangeFormattingSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerRangeFormattingSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.DocumentRangeFormattingEditProviderRegistry.register(selector, <modes.DocumentRangeFormattingEditProvider>{
 			provideDocumentRangeFormattingEdits: (model: IReadOnlyModel, range: EditorRange, options: modes.FormattingOptions, token: CancellationToken): Thenable<ISingleEditOperation[]> => {
 				return wireCancellationToken(token, this._proxy.$provideDocumentRangeFormattingEdits(handle, model.uri, range, options));
@@ -190,7 +191,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 		return undefined;
 	}
 
-	$registerOnTypeFormattingSupport(handle: number, selector: vscode.DocumentSelector, autoFormatTriggerCharacters: string[]): TPromise<any> {
+	$registerOnTypeFormattingSupport(handle: number, selector: LanguageFilter, autoFormatTriggerCharacters: string[]): TPromise<any> {
 		this._registrations[handle] = modes.OnTypeFormattingEditProviderRegistry.register(selector, <modes.OnTypeFormattingEditProvider>{
 
 			autoFormatTriggerCharacters,
@@ -218,7 +219,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- rename
 
-	$registerRenameSupport(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerRenameSupport(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.RenameProviderRegistry.register(selector, <modes.RenameProvider>{
 			provideRenameEdits: (model: IReadOnlyModel, position: EditorPosition, newName: string, token: CancellationToken): Thenable<modes.WorkspaceEdit> => {
 				return wireCancellationToken(token, this._proxy.$provideRenameEdits(handle, model.uri, position, newName));
@@ -229,7 +230,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- suggest
 
-	$registerSuggestSupport(handle: number, selector: vscode.DocumentSelector, triggerCharacters: string[], supportsResolveDetails: boolean): TPromise<any> {
+	$registerSuggestSupport(handle: number, selector: LanguageFilter, triggerCharacters: string[], supportsResolveDetails: boolean): TPromise<any> {
 
 		this._registrations[handle] = modes.SuggestRegistry.register(selector, <modes.ISuggestSupport>{
 			triggerCharacters,
@@ -254,7 +255,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- parameter hints
 
-	$registerSignatureHelpProvider(handle: number, selector: vscode.DocumentSelector, triggerCharacter: string[]): TPromise<any> {
+	$registerSignatureHelpProvider(handle: number, selector: LanguageFilter, triggerCharacter: string[]): TPromise<any> {
 		this._registrations[handle] = modes.SignatureHelpProviderRegistry.register(selector, <modes.SignatureHelpProvider>{
 
 			signatureHelpTriggerCharacters: triggerCharacter,
@@ -269,7 +270,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- links
 
-	$registerDocumentLinkProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerDocumentLinkProvider(handle: number, selector: LanguageFilter): TPromise<any> {
 		this._registrations[handle] = modes.LinkProviderRegistry.register(selector, <modes.LinkProvider>{
 			provideLinks: (model, token) => {
 				return this._heapService.trackRecursive(wireCancellationToken(token, this._proxy.$provideDocumentLinks(handle, model.uri)));
@@ -283,7 +284,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 
 	// --- colors
 
-	$registerDocumentColorProvider(handle: number, selector: vscode.DocumentSelector): TPromise<any> {
+	$registerDocumentColorProvider(handle: number, selector: LanguageFilter): TPromise<any> {
 		const proxy = this._proxy;
 		this._registrations[handle] = modes.ColorProviderRegistry.register(selector, <modes.DocumentColorProvider>{
 			provideColorRanges: (model, token) => {

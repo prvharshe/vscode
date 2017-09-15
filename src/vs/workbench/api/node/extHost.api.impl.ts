@@ -6,7 +6,7 @@
 
 import { Emitter } from 'vs/base/common/event';
 import { TrieMap } from 'vs/base/common/map';
-import { score } from 'vs/editor/common/modes/languageSelector';
+import { score, LanguageFilter } from 'vs/editor/common/modes/languageSelector';
 import * as Platform from 'vs/base/common/platform';
 import * as errors from 'vs/base/common/errors';
 import product from 'vs/platform/node/product';
@@ -227,7 +227,7 @@ export function createApiFactory(
 				return extHostLanguages.getLanguages();
 			},
 			match(selector: vscode.DocumentSelector, document: vscode.TextDocument): number {
-				return score(selector, <any>document.uri, document.languageId);
+				return score(selector as LanguageFilter, <any>document.uri, document.languageId);
 			},
 			registerCodeActionsProvider(selector: vscode.DocumentSelector, provider: vscode.CodeActionProvider): vscode.Disposable {
 				return languageFeatures.registerCodeActionProvider(selector, provider);
