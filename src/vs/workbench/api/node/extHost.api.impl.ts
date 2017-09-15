@@ -419,8 +419,8 @@ export function createApiFactory(
 			applyEdit(edit: vscode.WorkspaceEdit): TPromise<boolean> {
 				return extHostWorkspace.appyEdit(edit);
 			},
-			createFileSystemWatcher: (pattern, ignoreCreate, ignoreChange, ignoreDelete): vscode.FileSystemWatcher => {
-				return extHostFileSystemEvent.createFileSystemWatcher(pattern, ignoreCreate, ignoreChange, ignoreDelete);
+			createFileSystemWatcher: (folderOrGlobPattern, globPatternOrIgnoreCreate, ignoreCreateOrChange, ignoreChangeOrDelete, ignoreDelete?): vscode.FileSystemWatcher => {
+				return extHostFileSystemEvent.createFileSystemWatcher(folderOrGlobPattern, globPatternOrIgnoreCreate, ignoreCreateOrChange, ignoreChangeOrDelete, ignoreDelete);
 			},
 			get textDocuments() {
 				return extHostDocuments.getAllDocumentData().map(data => data.document);

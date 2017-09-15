@@ -7,8 +7,9 @@
 import Event, { Emitter } from 'vs/base/common/event';
 import { Disposable } from './extHostTypes';
 import { parse } from 'vs/base/common/glob';
-import { Uri, FileSystemWatcher as _FileSystemWatcher } from 'vscode';
+import { Uri, FileSystemWatcher as _FileSystemWatcher, WorkspaceFolder } from 'vscode';
 import { FileSystemEvents, ExtHostFileSystemEventServiceShape } from './extHost.protocol';
+import { isEqualOrParent } from 'vs/base/common/paths';
 
 class FileSystemWatcher implements _FileSystemWatcher {
 
@@ -30,8 +31,7 @@ class FileSystemWatcher implements _FileSystemWatcher {
 		return Boolean(this._config & 0b100);
 	}
 
-	constructor(dispatcher: Event<FileSystemEvents>, globPattern: string, ignoreCreateEvents?: boolean, ignoreChangeEvents?: boolean, ignoreDeleteEvents?: boolean) {
-
+	constructor(dispatcher: Event<FileSystemEvents>, globPattern: string, folder?: WorkspaceFolder, ignoreCreateEvents?: boolean, ignoreChangeEvents?: boolean, ignoreDeleteEvents?: boolean) {
 		this._config = 0;
 		if (ignoreCreateEvents) {
 			this._config += 0b001;
@@ -48,21 +48,21 @@ class FileSystemWatcher implements _FileSystemWatcher {
 		let subscription = dispatcher(events => {
 			if (!ignoreCreateEvents) {
 				for (let created of events.created) {
-					if (parsedPattern(created.fsPath)) {
+					if (this.matchFolderCondition(created, folder) && parsedPattern(created.fsPath)) {
 						this._onDidCreate.fire(created);
 					}
 				}
 			}
 			if (!ignoreChangeEvents) {
 				for (let changed of events.changed) {
-					if (parsedPattern(changed.fsPath)) {
+					if (this.matchFolderCondition(changed, folder) && parsedPattern(changed.fsPath)) {
 						this._onDidChange.fire(changed);
 					}
 				}
 			}
 			if (!ignoreDeleteEvents) {
 				for (let deleted of events.deleted) {
-					if (parsedPattern(deleted.fsPath)) {
+					if (this.matchFolderCondition(deleted, folder) && parsedPattern(deleted.fsPath)) {
 						this._onDidDelete.fire(deleted);
 					}
 				}
@@ -70,6 +70,14 @@ class FileSystemWatcher implements _FileSystemWatcher {
 		});
 
 		this._disposable = Disposable.from(this._onDidCreate, this._onDidChange, this._onDidDelete, subscription);
+	}
+
+	matchFolderCondition(resource: Uri, folder?: WorkspaceFolder): boolean {
+		if (!folder) {
+			return true; // if folder not provided, always match condition
+		}
+
+		return isEqualOrParent(resource.fsPath, folder.uri.fsPath); // ensure resource is child of folder
 	}
 
 	dispose() {
@@ -96,8 +104,33 @@ export class ExtHostFileSystemEventService implements ExtHostFileSystemEventServ
 	constructor() {
 	}
 
-	public createFileSystemWatcher(globPattern: string, ignoreCreateEvents?: boolean, ignoreChangeEvents?: boolean, ignoreDeleteEvents?: boolean): _FileSystemWatcher {
-		return new FileSystemWatcher(this._emitter.event, globPattern, ignoreCreateEvents, ignoreChangeEvents, ignoreDeleteEvents);
+	public createFileSystemWatcher(folder: WorkspaceFolder, globPattern: string, ignoreCreateEvents?: boolean, ignoreChangeEvents?: boolean, ignoreDeleteEvents?: boolean): _FileSystemWatcher;
+	public createFileSystemWatcher(globPattern: string, ignoreCreateEvents?: boolean, ignoreChangeEvents?: boolean, ignoreDeleteEvents?: boolean): _FileSystemWatcher;
+	public createFileSystemWatcher(folderOrGlobPattern: WorkspaceFolder | string, globPatternOrIgnoreCreate?: string | boolean, ignoreCreateOrChange?: boolean, ignoreChangeOrDelete?: boolean, ignoreDelete?: boolean): _FileSystemWatcher {
+		let workspaceFolder: WorkspaceFolder;
+		let globPattern: string;
+		let ignoreCreateEvents: boolean;
+		let ignoreChangeEvents: boolean;
+		let ignoreDeleteEvents: boolean;
+
+		// No workspace folder provided
+		if (typeof folderOrGlobPattern === 'string' && typeof globPatternOrIgnoreCreate !== 'string') {
+			globPattern = folderOrGlobPattern;
+			ignoreCreateEvents = globPatternOrIgnoreCreate;
+			ignoreChangeEvents = ignoreCreateOrChange;
+			ignoreDeleteEvents = ignoreChangeOrDelete;
+		}
+
+		// Workspace folder provided
+		else if (typeof folderOrGlobPattern !== 'string' && typeof globPatternOrIgnoreCreate === 'string') {
+			workspaceFolder = folderOrGlobPattern;
+			globPattern = globPatternOrIgnoreCreate;
+			ignoreCreateEvents = ignoreCreateOrChange;
+			ignoreChangeEvents = ignoreChangeOrDelete;
+			ignoreDeleteEvents = ignoreDelete;
+		}
+
+		return new FileSystemWatcher(this._emitter.event, globPattern, workspaceFolder, ignoreCreateEvents, ignoreChangeEvents, ignoreDeleteEvents);
 	}
 
 	$onFileEvent(events: FileSystemEvents) {
