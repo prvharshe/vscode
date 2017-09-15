@@ -40,6 +40,20 @@ declare module 'vscode' {
 
 	export namespace workspace {
 		export function registerFileSystemProvider(authority: string, provider: FileSystemProvider): Disposable;
+
+		/**
+		 * Find files in in specific [workspace folders](#WorkspaceFolder).
+		 *
+		 * @sample `findFiles([folder1, folder2], '**∕*.js', '**∕node_modules∕**', 10)`
+		 *
+		 * @param folders The [workspace folders](#WorkspaceFolder) to find files in.
+		 * @param include A glob pattern that defines the files to search for.
+		 * @param exclude A glob pattern that defines files and folders to exclude.
+		 * @param maxResults An upper-bound for the result.
+		 * @param token A token that can be used to signal cancellation to the underlying search engine.
+		 * @return A thenable that resolves to an array of resource identifiers.
+		 */
+		export function findFiles(folders: WorkspaceFolder[], include: string, exclude?: string, maxResults?: number, token?: CancellationToken): Thenable<Uri[]>;
 	}
 
 	export namespace window {

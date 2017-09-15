@@ -60,13 +60,12 @@ export class MainThreadWorkspace implements MainThreadWorkspaceShape {
 
 	// --- search ---
 
-	$startSearch(include: string, exclude: string, maxResults: number, requestId: number): Thenable<URI[]> {
-		const workspace = this._contextService.getWorkspace();
-		if (!workspace.folders.length) {
+	$startSearch(folders: URI[], include: string, exclude: string, maxResults: number, requestId: number): Thenable<URI[]> {
+		if (!folders.length) {
 			return undefined;
 		}
 		const query: ISearchQuery = {
-			folderQueries: workspace.folders.map(root => ({ folder: root })),
+			folderQueries: folders.map(folder => ({ folder })),
 			type: QueryType.File,
 			maxResults,
 			includePattern: { [include]: true },

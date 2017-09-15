@@ -297,7 +297,7 @@ export interface MainThreadTelemetryShape extends IDisposable {
 }
 
 export interface MainThreadWorkspaceShape extends IDisposable {
-	$startSearch(include: string, exclude: string, maxResults: number, requestId: number): Thenable<URI[]>;
+	$startSearch(folders: URI[], include: string, exclude: string, maxResults: number, requestId: number): Thenable<URI[]>;
 	$cancelSearch(requestId: number): Thenable<boolean>;
 	$saveAll(includeUntitled?: boolean): Thenable<boolean>;
 	$applyWorkspaceEdit(edits: IResourceEdit[]): TPromise<boolean>;

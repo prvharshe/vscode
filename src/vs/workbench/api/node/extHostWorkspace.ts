@@ -173,9 +173,33 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 
 	// --- search ---
 
-	findFiles(include: string, exclude: string, maxResults?: number, token?: vscode.CancellationToken): Thenable<vscode.Uri[]> {
+	findFiles(folders: vscode.WorkspaceFolder[], include: string, exclude: string, maxResults?: number, token?: vscode.CancellationToken): Thenable<vscode.Uri[]>;
+	findFiles(include: string, exclude: string, maxResults?: number, token?: vscode.CancellationToken): Thenable<vscode.Uri[]>;
+	findFiles(foldersOrInclude: vscode.WorkspaceFolder[] | string, includeOrExclude: string, excludeOrMaxResults?: string | number, maxResultsOrToken?: number | vscode.CancellationToken, token?: vscode.CancellationToken): Thenable<vscode.Uri[]> {
+		let folders: URI[];
+		let include: string;
+		let exclude: string;
+		let maxResults: number;
+
+		// No workspace folder provided
+		if (typeof foldersOrInclude === 'string' && typeof excludeOrMaxResults !== 'string' && typeof maxResultsOrToken !== 'number') {
+			folders = this._workspace.folders;
+			include = foldersOrInclude;
+			exclude = includeOrExclude;
+			maxResults = excludeOrMaxResults;
+			token = maxResultsOrToken;
+		}
+
+		// Workspace folder provided
+		else if (typeof foldersOrInclude !== 'string' && typeof excludeOrMaxResults !== 'number') {
+			folders = foldersOrInclude.map(folder => folder.uri as URI);
+			include = includeOrExclude;
+			exclude = excludeOrMaxResults;
+			maxResults = maxResultsOrToken as number;
+		}
+
 		const requestId = ExtHostWorkspace._requestIdPool++;
-		const result = this._proxy.$startSearch(include, exclude, maxResults, requestId);
+		const result = this._proxy.$startSearch(folders, include, exclude, maxResults, requestId);
 		if (token) {
 			token.onCancellationRequested(() => this._proxy.$cancelSearch(requestId));
 		}
