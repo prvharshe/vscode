@@ -86,16 +86,15 @@ export class ExtensionTipsService implements IExtensionTipsService {
 		}, err => []);
 	}
 
-	getRecommendations(): string[] {
+	getRecommendations(): TPromise<string[]> {
 		const allRecomendations = this._getAllRecommendationsInProduct();
 		const fileBased = Object.keys(this._fileBasedRecommendations)
 			.filter(recommendation => allRecomendations.indexOf(recommendation) !== -1);
 
-		const exeBased = distinct(this._suggestBasedOnExecutables());
-
-		this.telemetryService.publicLog('extensionRecommendations:unfiltered', { fileBased, exeBased });
-
-		return distinct([...fileBased, ...exeBased]);
+		return this._suggestBasedOnExecutables().then(exeBased => {
+			this.telemetryService.publicLog('extensionRecommendations:unfiltered', { fileBased, exeBased });
+			return distinct([...fileBased, ...exeBased]);
+		});
 	}
 
 	getKeymapRecommendations(): string[] {
@@ -318,39 +317,67 @@ export class ExtensionTipsService implements IExtensionTipsService {
 		});
 	}
 
-	private _suggestBasedOnExecutables(): string[] {
+	private _suggestBasedOnExecutables(): TPromise<string[]> {
 		if (!process.env.PATH || this._exeBasedRecommendations.length > 0) {
-			return this._exeBasedRecommendations;
+			return TPromise.as(this._exeBasedRecommendations);
 		}
 
 		let envpaths: string[] = process.env.PATH.split(process.platform === 'win32' ? ';' : ':');
-		let foundExecutables: Set<string> = new Set<string>();
+		let foundExecutablesSet: Set<string> = new Set<string>();
+		let recommendationSet: Set<string> = new Set<string>();
 
-		// Loop through recommended extensions
-		forEach(product.exeBasedExtensionTips, entry => {
-			let executables = entry.value.split(',');
-
-			// Loop through executables that would result in recommending current extension
-			for (let i = 0; i < executables.length; i++) {
-				if (!foundExecutables.has(executables[i])) {
-					let fileName = process.platform === 'win32' ? executables[i] + '.exe' : executables[i];
-
-					// Loop through paths in PATH to find current executable
-					let fileCheckPromises = envpaths.map(x => pfs.fileExists(paths.join(x, fileName)));
-					TPromise.join(fileCheckPromises).then(values => {
-						if (values.some(x => x)) {
-							foundExecutables.add(executables[i]);
-						}
-					});
-				}
-				if (foundExecutables.has(executables[i])) {
-					this._exeBasedRecommendations.push(entry.key);
-					break;
-				}
+		let checkExecutable = (exeName: string, currentRecommendation: string): TPromise<void> => {
+			if (foundExecutablesSet.has(exeName)) {
+				recommendationSet.add(currentRecommendation);
+				return TPromise.as(null);
 			}
-		});
+			let fileName = process.platform === 'win32' ? exeName + '.exe' : exeName;
+			let pathCheckPromises = envpaths.map(x => {
+				return pfs.fileExists(paths.join(x, fileName)).then(exists => {
+					if (exists) {
+						foundExecutablesSet.add(exeName);
+						recommendationSet.add(currentRecommendation);
+					}
+				});
+			});
 
-		return this._exeBasedRecommendations;
+			return TPromise.join(pathCheckPromises).then(() => { return TPromise.as(null); });
+		};
+
+		let checkRecommendation = (currentRecommendation: string, executables: string): TPromise<void> => {
+			if (recommendationSet.has(currentRecommendation)) {
+				return TPromise.as(null);
+			}
+
+			let exeArray = executables.split(',');
+			let checkExecutablesSequentially = (): TPromise<void> => {
+				if (exeArray.length === 0) {
+					return TPromise.as(null);
+				}
+				return checkExecutable(exeArray.pop(), currentRecommendation).then(() => {
+					return recommendationSet.has(currentRecommendation) ? TPromise.as(null) : checkExecutablesSequentially();
+				});
+			};
+			return checkExecutablesSequentially();
+		};
+
+		let recommendations = Object.keys(product.exeBasedExtensionTips);
+		let checkRecommendationsSequentially = () => {
+			if (recommendations.length === 0) {
+				return TPromise.as(null);
+			}
+			let current = recommendations.pop();
+			return checkRecommendation(current, product.exeBasedExtensionTips[current]).then(() => {
+				return checkRecommendationsSequentially();
+			});
+		};
+
+		// We want to check for recommendations sequentially otherwise we end up running x*y*z number of fs.exists calls at the same time
+		// where x = # of extension recommendations, y = # of executables to look for each recommendation, z = # of paths in the PATH variable
+		return checkRecommendationsSequentially().then(() => {
+			recommendationSet.forEach(x => this._exeBasedRecommendations.push(x));
+			return TPromise.as(this._exeBasedRecommendations);
+		});
 	}
 
 	private setIgnoreRecommendationsConfig(configVal: boolean) {

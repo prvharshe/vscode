@@ -288,7 +288,7 @@ export class ExtensionsListView extends CollapsibleView {
 		return this.extensionsWorkbenchService.queryLocal()
 			.then(result => result.filter(e => e.type === LocalExtensionType.User))
 			.then(local => {
-				return TPromise.join([TPromise.as(this.tipsService.getRecommendations()), this.tipsService.getWorkspaceRecommendations()])
+				return TPromise.join([this.tipsService.getRecommendations(), this.tipsService.getWorkspaceRecommendations()])
 					.then(([recommendations, workspaceRecommendations]) => {
 						const names = distinct([...recommendations, ...workspaceRecommendations])
 							.filter(name => local.every(ext => `${ext.publisher}.${ext.name}` !== name))
@@ -310,18 +310,21 @@ export class ExtensionsListView extends CollapsibleView {
 		return this.extensionsWorkbenchService.queryLocal()
 			.then(result => result.filter(e => e.type === LocalExtensionType.User))
 			.then(local => {
-				const names = this.tipsService.getRecommendations()
-					.filter(name => local.every(ext => `${ext.publisher}.${ext.name}` !== name))
-					.filter(name => name.toLowerCase().indexOf(value) > -1);
+				return this.tipsService.getRecommendations().then(recommendations => {
+					const names = recommendations
+						.filter(name => local.every(ext => `${ext.publisher}.${ext.name}` !== name))
+						.filter(name => name.toLowerCase().indexOf(value) > -1);
 
-				this.telemetryService.publicLog('extensionRecommendations:open', { count: names.length });
+					this.telemetryService.publicLog('extensionRecommendations:open', { count: names.length });
 
-				if (!names.length) {
-					return TPromise.as(new PagedModel([]));
-				}
-				options.source = 'recommendations';
-				return this.extensionsWorkbenchService.queryGallery(assign(options, { names, pageSize: names.length }))
-					.then(pager => new PagedModel(pager || []));
+					if (!names.length) {
+						return TPromise.as(new PagedModel([]));
+					}
+					options.source = 'recommendations';
+					return this.extensionsWorkbenchService.queryGallery(assign(options, { names, pageSize: names.length }))
+						.then(pager => new PagedModel(pager || []));
+				});
+
 			});
 	}
 
