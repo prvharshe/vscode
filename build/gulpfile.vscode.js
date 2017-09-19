@@ -464,6 +464,12 @@ gulp.task('upload-vscode-configuration', ['generate-vscode-configuration'], () =
 
 gulp.task('generate-vscode-configuration', () => {
 	return new Promise((resolve, reject) => {
+		console.log(process.env.BUILD_SOURCEBRANCH);
+		if (process.env.BUILD_SOURCEBRANCH !== 'master') {
+			resolve();
+			return;
+		}
+
 		const buildDir = process.env['AGENT_BUILDDIRECTORY'];
 		if (!buildDir) {
 			return reject(new Error('$AGENT_BUILDDIRECTORY not set'));
