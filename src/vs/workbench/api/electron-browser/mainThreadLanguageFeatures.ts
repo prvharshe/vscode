@@ -287,7 +287,7 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 	$registerDocumentColorProvider(handle: number, selector: LanguageFilter): TPromise<any> {
 		const proxy = this._proxy;
 		this._registrations[handle] = modes.ColorProviderRegistry.register(selector, <modes.DocumentColorProvider>{
-			provideColorRanges: (model, token) => {
+			provideDocumentColors: (model, token) => {
 				return wireCancellationToken(token, proxy.$provideDocumentColors(handle, model.uri))
 					.then(documentColors => {
 						return documentColors.map(documentColor => {
@@ -306,8 +306,12 @@ export class MainThreadLanguageFeatures implements MainThreadLanguageFeaturesSha
 						});
 					});
 			},
-			resolveColor: (color, format, token) => {
-				return wireCancellationToken(token, proxy.$resolveDocumentColor(handle, color, format));
+
+			provideColorPresentations: (colorInfo, token) => {
+				return wireCancellationToken(token, proxy.$provideColorPresentations(handle, {
+					color: [colorInfo.color.red, colorInfo.color.green, colorInfo.color.blue, colorInfo.color.alpha],
+					range: colorInfo.range
+				}));
 			}
 		});
 
