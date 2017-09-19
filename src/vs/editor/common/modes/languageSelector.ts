@@ -8,12 +8,13 @@
 import URI from 'vs/base/common/uri';
 import { match as matchGlobPattern } from 'vs/base/common/glob'; // TODO@Alex
 import { isEqualOrParent } from 'vs/base/common/paths';
+import { WorkspaceFolder } from 'vs/platform/workspace/common/workspace';
 
 export interface LanguageFilter {
 	language?: string;
 	scheme?: string;
 	pattern?: string;
-	folder?: { uri: URI, name: string, index: number }; // TODO@Ben wait for WorkspaceFolder type in main
+	folder?: WorkspaceFolder;
 }
 
 export type LanguageSelector = string | LanguageFilter | (string | LanguageFilter)[];
