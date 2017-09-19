@@ -177,7 +177,7 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape {
 
 		// No workspace folder provided
 		if (typeof foldersOrInclude === 'string' && typeof excludeOrMaxResults !== 'string' && typeof maxResultsOrToken !== 'number') {
-			folders = this._workspace.folders;
+			folders = this._workspace.folders.map(folder => folder.uri);
 			include = foldersOrInclude;
 			exclude = includeOrExclude;
 			maxResults = excludeOrMaxResults;
